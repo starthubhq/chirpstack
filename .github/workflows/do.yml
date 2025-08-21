@@ -1,0 +1,81 @@
+name: Build and Run Docker (with secrets)
+
+on:
+  # workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        run: |
+          docker build -t my-app:latest .
+
+      # Write SSH private key (multiline secret) to a file with correct perms
+      # - name: Prepare SSH key
+      #   run: |
+      #     mkdir -p "$RUNNER_TEMP/ssh"
+      #     chmod 600 "$RUNNER_TEMP/ssh/id_rsa"
+
+      - name: Run container (entrypoint consumes env + mounted key)
+        env:
+          # Map secrets/env to the names your entrypoint expects
+          do_access_token: ${{ secrets.DO_ACCESS_TOKEN }}
+          # do_domain: ${{ vars.DO_DOMAIN }}               # example of non-secret repo/org ENV
+          do_project_name: ${{ secrets.DO_PROJECT_NAME }}
+          # do_project_description: ${{ vars.DO_PROJECT_DESCRIPTION }}
+          # do_vpc_region: ${{ vars.DO_VPC_REGION }}
+          # do_vpc_name: ${{ vars.DO_VPC_NAME }}
+          # do_ssh_firewall_name: ${{ vars.DO_SSH_FW_NAME }}
+          # do_db_name: ${{ vars.DO_DB_NAME }}
+          # do_db_engine: ${{ vars.DO_DB_ENGINE }}
+          # do_db_version: ${{ vars.DO_DB_VERSION }}
+          # do_db_size: ${{ vars.DO_DB_SIZE }}
+          # do_db_region: ${{ vars.DO_DB_REGION }}
+          # do_db_node_count: ${{ vars.DO_DB_NODE_COUNT }}
+          # do_mosquitto_name: ${{ vars.DO_MOSQUITTO_NAME }}
+          # do_mosquitto_region: ${{ vars.DO_MOSQUITTO_REGION }}
+          # do_mosquitto_size: ${{ vars.DO_MOSQUITTO_SIZE }}
+          # do_mosquitto_image: ${{ vars.DO_MOSQUITTO_IMAGE }}
+          # do_mosquitto_username: ${{ secrets.MOSQUITTO_USERNAME }}
+          # do_mosquitto_password: ${{ secrets.MOSQUITTO_PASSWORD }}
+          # do_mosquitto_firewall_name: ${{ vars.DO_MOSQUITTO_FW_NAME }}
+          # do_chirpstack_droplet_count: ${{ vars.DO_CHIRPSTACK_COUNT }}
+          # do_chirpstack_droplet_size: ${{ vars.DO_CHIRPSTACK_SIZE }}
+          # do_chirpstack_droplet_image: ${{ vars.DO_CHIRPSTACK_IMAGE }}
+          # do_chirpstack_droplet_region: ${{ vars.DO_CHIRPSTACK_REGION }}
+          # do_chirpstack_firewall_name: ${{ vars.DO_CHIRPSTACK_FW_NAME }}
+          # redis_droplet_name: ${{ vars.REDIS_NAME }}
+          # redis_droplet_size: ${{ vars.REDIS_SIZE }}
+          # redis_droplet_image: ${{ vars.REDIS_IMAGE }}
+          # redis_region: ${{ vars.REDIS_REGION }}
+          # redis_password: ${{ secrets.REDIS_PASSWORD }}
+          # do_loadbalancer_name: ${{ vars.DO_LB_NAME }}
+          # do_loadbalancer_region: ${{ vars.DO_LB_REGION }}
+          # do_lorawan_subdomain: ${{ vars.DO_LORAWAN_SUBDOMAIN }}
+          # do_ssh_key_ids is produced by your script after uploading the public key
+        run: |
+          mkdir -p "${{ github.workspace }}/outputs"
+
+          docker run --rm \
+            -v "${{ github.workspace }}/outputs:/mnt/volume" \
+            -v "$RUNNER_TEMP/ssh/id_rsa:/root/.ssh/id_rsa:ro" \
+            -e private_key_path="/root/.ssh/id_rsa" \
+            -e do_access_token \
+            -e do_project_name \
+            my-app:latest
+
+      - name: Upload outputs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs
+          path: outputs
