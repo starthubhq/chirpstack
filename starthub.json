@@ -1,0 +1,15 @@
+{
+  "name": "chirpstack-postgres-redis-mosquitto",
+  "providers": ["digitalocean"],
+  "tags": ["chirpstack", "iot"],
+  "inputs": [
+    {
+
+    }
+  ],
+  "outputs": [
+    {
+      
+    }
+  ]
+}
